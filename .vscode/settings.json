@@ -1,0 +1,8 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "cSpell.enabled": true,
+  "[quarto]": {
+    "editor.defaultFormatter": "quarto.quarto"
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "date": "2026-09-30",
+    "sport": "bike",
+    "title": "Zone 2 ride",
+    "duration_min": 60,
+    "intensity": "easy",
+    "notes": "Flat route, keep HR under 145",
+    "completed": false
+  },
+  {
+    "date": "2026-09-29",
+    "sport": "run",
+    "title": "Aerobic Run: Medium Effort",
+    "duration_min": 45,
+    "intensity": "easy",
+    "notes": "Focus on catch and rotation, 200m warmup + drills",
+    "completed": false
+  },
+  {
+    "date": "2026-09-28",
+    "sport": "bike",
+    "title": "Zone 2 ride",
+    "duration_min": 60,
+    "intensity": "easy",
+    "notes": "Flat route, keep HR under 145",
+    "completed": false
+  },
+  {
+    "date": "2026-09-27",
+    "sport": "run",
+    "title": "Family Run",
+    "duration_min": 30,
+    "intensity": "easy",
+    "notes": "Conversational pace",
+    "completed": true
+  }
+]

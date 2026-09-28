@@ -1,0 +1,212 @@
+---
+title: "🏊‍♂️🚴‍♀️🏃 Triathlon Training Calendar"
+format:
+  html:
+    embed-resources: true
+    page-layout: full
+    toc: false
+    theme: none
+params:
+  data_file: "workouts.json"
+  year: 2026
+  month: 9
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+
+# params <- list(data_file = "workouts.json", year = 2026, month = 9)
+
+source("functions.R")
+source("global_vars.R")
+
+workouts <- params$data_file |>
+  jsonlite::fromJSON(simplifyDataFrame = TRUE) |>
+  tibble::as_tibble() |>
+  dplyr::mutate(
+    date = as.Date(date),
+    completed = as.logical(completed)
+  )
+
+first_day <- as.Date(
+  sprintf(
+    "%04d-%02d-01",
+    as.integer(params$year),
+    as.integer(params$month)
+  )
+)
+
+last_day <- lubridate::ceiling_date(first_day, "month") - lubridate::days(1)
+
+lead_blanks <- wday_sun(first_day) - 1
+
+trail_blanks <- (7 - wday_sun(last_day)) %% 7
+
+month_dates <- seq(first_day, last_day, by = "day")
+
+all_cells <- as.Date(
+  c(
+    rep(NA_real_, lead_blanks),
+    as.numeric(month_dates),
+    rep(NA_real_, trail_blanks)
+  ),
+  origin = "1970-01-01"
+)
+
+
+n_weeks <- length(all_cells) / 7
+week_rows <- vapply(
+  seq_len(n_weeks),
+  function(w) {
+    idx <- ((w - 1) * 7 + 1):(w * 7)
+    paste0(
+      '<div class="cal-row">',
+      paste(
+        vapply(all_cells[idx], build_day_cell, character(1)),
+        collapse = ""
+      ),
+      '</div>'
+    )
+  },
+  character(1)
+)
+
+month_label <- format(first_day, "%B %Y")
+```
+
+```{r render-calendar}
+#| output: asis
+
+calendar <- paste0(readLines("html/calendar.html"), collapse = "\n")
+
+calendar <- glue::glue(
+  calendar,
+  month_label = month_label,
+  week_rows = paste(week_rows, collapse = ""),
+  .open = "{{",
+  .close = "}}",
+  .trim = FALSE
+)
+
+cat("```{=html}\n", calendar, "\n```\n", sep = "")
+```
+
+```{r monthly-summary}
+#| output: asis
+month_totals <- workouts |>
+  dplyr::filter(date >= first_day, date <= last_day) |>
+  dplyr::group_by(sport) |>
+  dplyr::summarise(
+    minutes = sum(duration_min, na.rm = TRUE),
+    sessions = dplyr::n(),
+    .groups = "drop"
+  )
+
+
+cards <- vapply(
+  seq_len(nrow(month_totals)),
+  function(i) {
+    row <- month_totals[i, ]
+    meta <- get_meta(row$sport)
+    bg <- card_colors[[row$sport]]
+    if (is.null(bg)) {
+      bg <- "#334155"
+    }
+    paste0(
+      '<div class="summary-card" style="background:',
+      bg,
+      '">',
+      '<span class="big">',
+      meta$icon,
+      ' ',
+      row$minutes,
+      '</span>',
+      '<span class="lbl">',
+      meta$label,
+      ' min &middot; ',
+      row$sessions,
+      ' sessions</span>',
+      '</div>'
+    )
+  },
+  character(1)
+)
+
+cat(paste0(
+  '<div class="summary-panel">',
+  paste(cards, collapse = ""),
+  '</div>'
+))
+```
+
+```{r upcoming}
+#| output: asis
+upcoming <- workouts |>
+  dplyr::filter(date >= Sys.Date(), date <= Sys.Date() + lubridate::days(6)) |>
+  dplyr::arrange(date)
+
+if (nrow(upcoming) > 0) {
+  items <- vapply(
+    seq_len(nrow(upcoming)),
+    function(i) {
+      w <- upcoming[i, ]
+      meta <- get_meta(w$sport)
+      paste0(
+        '<li><span class="u-date">',
+        format(w$date, "%a %b %d"),
+        '</span>',
+        '<span class="u-chip ',
+        meta$class,
+        '">',
+        meta$icon,
+        ' ',
+        meta$label,
+        '</span>',
+        '<span>',
+        html_escape(w$title),
+        ' (',
+        w$duration_min,
+        ' min)</span></li>'
+      )
+    },
+    character(1)
+  )
+  cat(paste0(
+    '<div class="upcoming"><h3>&#x1F4C5; Next 7 Days</h3><ul>',
+    paste(items, collapse = ""),
+    '</ul></div>'
+  ))
+} else {
+  cat(paste0(
+    '<div class="upcoming"><h3>&#x1F4C5; Next 7 Days</h3>',
+    '<p>No workouts scheduled &mdash; add some to <code>workouts.json</code>.</p></div>'
+  ))
+}
+```
+
+<!--
+HOW TO USE
+----------
+1. Put this file and workouts.json in the same folder, then render:
+     quarto render workout-calendar.qmd
+
+2. To view a different month, render with params, e.g. for July 2026:
+     quarto render workout-calendar.qmd -P year:2026 -P month:7
+
+   Or duplicate this file per month and hardcode `year`/`month` in the YAML
+   if you want a set of monthly pages you click between.
+
+3. Add workouts by appending objects to workouts.json:
+     {"date": "2026-11-02", "sport": "bike", "title": "Zone 2 ride",
+      "duration_min": 60, "intensity": "easy", "notes": "", "completed": false}
+
+   Valid `sport` values (each has its own color): swim, bike, run, strength, rest, race.
+   Any other value still renders (as a gray chip) so nothing breaks if you add a new type.
+
+4. Hover any workout chip to see its full title, duration, and notes as a tooltip.
+   Today's date gets a dashed orange outline; the "Next 7 Days" panel below the
+   calendar is a quick planning list independent of which month is displayed above.
+-->

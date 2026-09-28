@@ -8,12 +8,10 @@ website:
       - href: index.qmd
         text: Home
       - about.qmd
+      - workout-calendar.qmd
 
 format:
   html:
     theme: cosmo
     css: styles.css
     toc: true
-
-
-
